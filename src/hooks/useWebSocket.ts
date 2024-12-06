@@ -1,65 +1,81 @@
-import { useEffect, useCallback } from 'react';
-import { WebSocketService } from '../services/webSocketService';
-import { useCryptoStore } from './useCryptoStore';
-import { ProcessedTickerData } from '../types/WebSocketTypes';
+import { useEffect, useState } from "react";
+enum Status{
 
-export const useWebSocket = (endpoint:string,actionFn:any=null,onErrorFn:any=null,onBefore:any=null) => {
-useEffect(()=>{
+  NOT_STARTED=0,
+  START=1,
+  STOP=2
+}
+export const  useWebSocket = (
+  endpoint: string,
+  actionFn: any = null,
+  onErrorFn: any = null,
+  onBefore: any = null
+) => {
+  const [stopConnection, setStopConnection] = useState(Status.NOT_STARTED);
+  const [wsInstance, setWsInstance] = useState<WebSocket | null>(null);
 
+  useEffect(() => {
+    if (stopConnection===Status.STOP) {
+      if (wsInstance) {
+        console.log("Manually stopping WebSocket connection...");
+        wsInstance.close();
+      }
+      return;
+    }
 
-  if(onBefore!==null)
-  {
-    onBefore()
+    if(stopConnection===Status.START)
+    {
+
+    if (onBefore !== null) {
+      onBefore();
+    }
+
+    const ws = new WebSocket(endpoint);
+    setWsInstance(ws);
+
+    ws.onopen = () => {
+      console.log("WebSocket connection established.");
+    };
+
+    ws.onmessage = (event) => {
+      if (actionFn) {
+        console.log("WebSocket Message Received:", event);
+        actionFn(JSON.parse(event.data));
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket Error:", error);
+      if (onErrorFn) {
+        onErrorFn(error);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed.");
+    };
+  
+
+    // Cleanup WebSocket when the component unmounts
+    return () => {
+      console.log("Cleaning up WebSocket connection...");
+      ws.close();
+    };
   }
-  
-  const ws = new WebSocket(endpoint);
+  }, [stopConnection, endpoint]); // Rerun if `stopConnection` or `endpoint` changes
 
- 
-
-  ws.onmessage = (event) => {
-
-    if(actionFn)
+  // Function to toggle stopping the connection
+  const stopWebSocket = () => 
     {
-      console.log("here",event)
-      actionFn(JSON.parse(event.data))
+      if(stopConnection===Status.START)
+      setStopConnection(Status.STOP)
+    
     }
-    // const data = JSON.parse(event.data);
+  const startWebSocket = () => {
 
-    // console.log("data",data)
-    // Sort tokens by market cap (24h volume as a proxy) and get the top 100
-    // const topTokens = data
-    //   .sort((a, b) => parseFloat(b.q) - parseFloat(a.q)) // Sort by 24h quote volume
-    //   .slice(0, 100); // Get top 100 tokens
-
-  
-    // Display top tokens
-    // data.forEach((token:any) => {
-    //   const { s: symbol, c: price } = token; // `s` is symbol, `c` is current price
-
-    //   const tokenDiv = document.createElement("div");
-    //   tokenDiv.className = "token";
-    //   tokenDiv.innerHTML = `<strong>${symbol}:</strong> $${parseFloat(price).toFixed(2)}`;
-    //   pricesDiv.appendChild(tokenDiv);
-    // });
+    if(stopConnection===Status.NOT_STARTED||stopConnection===Status.STOP)
+    setStopConnection(Status.START)
   };
 
-  ws.onerror = (error) => {
-    console.error("WebSocket Error:", error);
-    if(onErrorFn)
-    {
-      onErrorFn(error)
-    }
-  };
-
-  ws.onclose = () => {
-    console.log("WebSocket connection closed.");
-  };
-
-  return () => {
-    console.log("Cleaning up WebSocket connection...");
-    ws.close();
-  };
-
-
-},[])
+  return { stopWebSocket, startWebSocket };
 };

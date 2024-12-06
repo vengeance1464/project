@@ -7,8 +7,6 @@ type Position = {
 };
 
 const Circle: React.FC<Position> = ({ position, updatePosition }) => {
-  console.log("Position", position);
-
   useTick(() => {
     updatePosition(); // Update circle position on every frame
   });

@@ -27,7 +27,6 @@ export const drawCircles = (
 
   context.clearRect(0, 0, width, height);
 
-  console.log("Context",context)
 
   // Draw the nodes
   nodes.forEach((node) => {

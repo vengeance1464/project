@@ -5,6 +5,7 @@ export interface CryptoData {
   marketCap: number;
   volume: number;
   image:string;
+  name:string;
 }
 
 export interface BubbleData extends CryptoData {
